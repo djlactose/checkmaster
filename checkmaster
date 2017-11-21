@@ -1,0 +1,62 @@
+#!/usr/bin/bash
+. /etc/checkmaster/checkmaster.conf
+
+appName=$0
+runType="z"
+while [[ $# -gt 1 ]]
+do
+key="$1"
+
+case $key in
+    -m|--master)
+	runType="m"
+	shift # past argument
+    ;;
+    -s|--slave)
+	runType="s"
+	shift # past argument
+    ;;
+    -f|--force)
+	runType="s"
+	force="true"
+	shift # past argument
+    ;;
+    --help)
+	echo "Usage: $appName [-m] [-s] [-f] <command>"
+	exit 1
+    ;;
+    -c|--command)
+	runCom="$2"
+	shift 2 # past argument
+    ;;
+    *)
+	echo "Usage: $appName [-m] [-s] [-f] <command>"
+	exit 1
+    ;;
+esac
+done
+
+if [ $force ]
+then	
+	if [ $(pcs status|grep Online|cut -d "[" -f 2|cut -d "]" -f 1|wc -w) -lt $force_threshold ]
+	then
+		runType="m"
+		isMaster="true"
+	fi
+fi
+if [ $(pcs status|grep $virtual_ip |grep -c $(hostname)) -gt 0 ]
+then
+	isMaster="true"
+fi
+if [ $runType = "m" ]
+then
+	if [ $isMaster ]
+	then
+		echo $($runCom)
+	fi
+else
+	if [ ! $isMaster ]
+	then
+		echo $($runCom)
+	fi
+fi
